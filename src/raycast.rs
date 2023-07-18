@@ -95,26 +95,24 @@ fn scan_horizontal_negative(
 
 //Returns x, y, and tile type
 pub fn raycast(start: &Vector2f64, angle: f64, max_dist: f64, level: &Level) -> (Vector2f64, u8) {
-    let vert;
     //Check vertical lines
-    if angle.cos() > 0.0 {
-        vert = scan_vertical_positive(start, angle, max_dist, level);
+    let vert = if angle.cos() > 0.0 {
+        scan_vertical_positive(start, angle, max_dist, level)
     } else {
-        vert = scan_vertical_negative(start, angle, max_dist, level);
-    }
+        scan_vertical_negative(start, angle, max_dist, level)
+    };
 
-    let horiz;
     //Check horizontal lines
-    if angle.sin() > 0.0 {
-        horiz = scan_horizontal_positive(start, angle, max_dist, level);
+    let horiz = if angle.sin() > 0.0 {
+        scan_horizontal_positive(start, angle, max_dist, level)
     } else {
-        horiz = scan_horizontal_negative(start, angle, max_dist, level);
-    }
+        scan_horizontal_negative(start, angle, max_dist, level)
+    };
 
     //Return the value that is closest
-    if (dist(&horiz.0, &start) < dist(&vert.0, &start) && horiz.1 != 0) || vert.1 == 0 {
-        return horiz;
+    if (dist(&horiz.0, start) < dist(&vert.0, start) && horiz.1 != 0) || vert.1 == 0 {
+        horiz
     } else {
-        return vert;
+        vert
     }
 }

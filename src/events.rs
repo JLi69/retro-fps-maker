@@ -29,59 +29,56 @@ impl InputState {
     }
 
     pub fn key_is_clicked(&self, key: Scancode) -> bool {
-        match self.key_state.get(&key) {
-            Some(ButtonState::Clicked) => return true,
-            _ => return false,
-        }
+        matches!(self.key_state.get(&key), Some(ButtonState::Clicked))
     }
 
     pub fn mouse_button_is_clicked(&self, button: MouseButton) -> bool {
-        match self.mouse_button_state.get(&button) {
-            Some(ButtonState::Clicked) => return true,
-            _ => return false,
-        }
+        matches!(
+            self.mouse_button_state.get(&button),
+            Some(ButtonState::Clicked)
+        )
     }
 
     pub fn key_is_held(&self, key: Scancode) -> bool {
-        match self.key_state.get(&key) {
-            Some(ButtonState::Clicked) => return true,
-            Some(ButtonState::Held) => return true,
-            _ => return false,
-        }
+        matches!(
+            self.key_state.get(&key),
+            Some(ButtonState::Clicked) | Some(ButtonState::Held)
+        )
     }
 
     pub fn mouse_button_is_held(&self, button: MouseButton) -> bool {
-        match self.mouse_button_state.get(&button) {
-            Some(ButtonState::Clicked) => return true,
-            Some(ButtonState::Held) => return true,
-            _ => return false,
-        }
+        matches!(
+            self.mouse_button_state.get(&button),
+            Some(ButtonState::Clicked) | Some(ButtonState::Held)
+        )
     }
 
     pub fn update(&mut self, event_pump: &EventPump) {
         let keyboard = event_pump.keyboard_state();
         let mouse = event_pump.mouse_state();
 
-        //Check for any new keys that were pressed
+        //Check for any new keys that were pressed, set those to be "clicked"
         for scancode in keyboard.pressed_scancodes() {
             match self.key_state.get(&scancode) {
                 Some(ButtonState::Released) | None => {
                     self.key_state.insert(scancode, ButtonState::Clicked);
                 }
                 Some(ButtonState::Clicked) => {
+                    //If it was "clicked" in the previous frame, set it to be held
                     self.key_state.insert(scancode, ButtonState::Held);
                 }
                 _ => {}
             }
         }
 
-        //Check for any new buttons that were pressed
+        //Check for any new buttons that were pressed, set those to be "clicked"
         for button in mouse.pressed_mouse_buttons() {
             match self.mouse_button_state.get(&button) {
                 Some(ButtonState::Released) | None => {
                     self.mouse_button_state.insert(button, ButtonState::Clicked);
                 }
                 Some(ButtonState::Clicked) => {
+                    //If it was "clicked" in the previous frame, set it to be held
                     self.mouse_button_state.insert(button, ButtonState::Held);
                 }
                 _ => {}
@@ -119,6 +116,7 @@ impl InputState {
                 .insert(button, ButtonState::Released);
         });
 
+        //Update mouse position
         self.mousex = mouse.x();
         self.mousey = mouse.y();
     }
