@@ -1,6 +1,8 @@
+use sdl2::image::LoadTexture;
+use sdl2::keyboard::Scancode;
 use sdl2::pixels::Color;
+use sdl2::render::{BlendMode, Canvas, Texture};
 use sdl2::video::Window;
-use sdl2::{keyboard::Scancode, render::Canvas};
 use std::time::Instant;
 
 mod camera;
@@ -46,6 +48,7 @@ fn display(
     game_mode: &GameMode,
     camera: &Camera,
     level: &Level,
+    textures: &mut [Texture],
     input_state: &InputState,
 ) -> Result<(), String> {
     canvas.set_draw_color(Color::BLACK);
@@ -56,7 +59,7 @@ fn display(
             display_level_editor(canvas, level, input_state)?;
         }
         GameMode::Game => {
-            display_level(canvas, camera, level)?;
+            display_level(canvas, camera, level, textures, 4)?;
         }
     }
 
@@ -93,10 +96,14 @@ fn main() -> Result<(), String> {
         .present_vsync()
         .build()
         .map_err(|e| e.to_string())?;
+    canvas.set_blend_mode(BlendMode::Blend);
     let mut event_pump = ctx.event_pump()?;
 
     let ttf_ctx = sdl2::ttf::init().map_err(|e| e.to_string())?;
     let texture_creator = canvas.texture_creator();
+
+    // Load textures
+    let mut textures = vec![texture_creator.load_texture("assets/images/test-texture.png")?];
 
     let mut level = Level::new(25, 20);
     let mut camera = Camera::new(0.5, 0.5, 0.0, std::f64::consts::PI / 3.0);
@@ -107,33 +114,18 @@ fn main() -> Result<(), String> {
     let font_8_bit_operator =
         ttf_ctx.load_font("assets/fonts/8BitOperator/8bitOperatorPlus-Regular.ttf", 64)?;
 
-    let menu_element = {
-        let mut element = menu::MenuElement::new(128, 128, 256, 256, Color::WHITE, Color::WHITE);
-        element.text.push(menu::Text::new("Hello World".to_owned(), Color::BLACK, 16, 16, 16));
-
-        let mut button = menu::MenuElement::new(128, 128, 192, 64, Color::GREEN, Color::RGB(0, 200, 0));
-        button.set_id("button");
-        button.text.push(menu::Text::new("press me".to_owned(), Color::BLACK, 24, 16, 16));
-        element.children.push(button);
-
-        element
-    };
-
     //Main loop
     while !can_quit(&mut event_pump) {
         let frame_start = Instant::now();
 
-        display(&mut canvas, &game_mode, &camera, &level, &input_state)?;
-        
-        menu_element.display_with_children(&mut canvas, &input_state)?;
-        menu_element.display_text_with_children(&mut canvas, &texture_creator, &font_8_bit_operator)?;
-        let clicked = menu_element.get_clicked(&input_state, sdl2::mouse::MouseButton::Left)
-            .unwrap_or("".to_owned());
-
-        if clicked == "button" {
-            println!("Clicked"); 
-        }
-
+        display(
+            &mut canvas,
+            &game_mode,
+            &camera,
+            &level,
+            &mut textures,
+            &input_state,
+        )?;
         canvas.present();
 
         update(&game_mode, &mut level, &mut camera, &input_state, dt);

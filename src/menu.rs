@@ -1,11 +1,11 @@
 use crate::InputState;
+use sdl2::mouse::MouseButton;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::Canvas;
 use sdl2::render::TextureCreator;
 use sdl2::ttf::Font;
 use sdl2::video::{Window, WindowContext};
-use sdl2::mouse::MouseButton;
 
 pub struct Text {
     pub text: String,
@@ -17,15 +17,15 @@ pub struct Text {
 
 impl Text {
     // Creates a text object
-    pub fn new(text_str: String, text_color: Color, posx: i32, posy: i32, ch_sz: u32) -> Self {
+    pub fn new(text_str: &str, text_color: Color, posx: i32, posy: i32, ch_sz: u32) -> Self {
         Self {
-            text: text_str,
+            text: text_str.to_owned(),
             color: text_color,
             x: posx,
             y: posy,
             char_size: ch_sz,
         }
-    } 
+    }
 
     // Width of the text in pixels
     pub fn width(&self) -> u32 {
@@ -57,7 +57,7 @@ impl Text {
         Ok(())
     }
 
-    fn display_with_offset(
+    pub fn display_with_offset(
         &self,
         offset: &Point,
         canvas: &mut Canvas<Window>,
@@ -86,26 +86,18 @@ impl Text {
     }
 }
 
-pub struct Bitmap {
-    image_data: Vec<u8>,
-    width: usize,
-    height: usize,
-}
-
-impl Bitmap {}
-
 pub struct MenuElement {
     bounding_rect: Rect,
     pub id: Option<String>,
     pub normal_color: Color,
     pub hover_color: Color,
     pub text: Vec<Text>,
-    pub children: Vec<MenuElement>
+    pub children: Vec<MenuElement>,
 }
 
 impl MenuElement {
     //x, y is the center of the element
-    //w, h is the width and height    
+    //w, h is the width and height
     pub fn new(x: i32, y: i32, w: u32, h: u32, normal: Color, hover: Color) -> Self {
         Self {
             bounding_rect: Rect::from_center(Point::new(x, y), w, h),
@@ -113,12 +105,12 @@ impl MenuElement {
             hover_color: hover,
             text: Vec::new(),
             children: Vec::new(),
-            id: None
+            id: None,
         }
     }
 
     pub fn set_id(&mut self, id: &str) {
-        self.id = Some(id.to_owned()); 
+        self.id = Some(id.to_owned());
     }
 
     pub fn mouse_hovering(&self, input_state: &InputState) -> bool {
@@ -127,18 +119,17 @@ impl MenuElement {
             .contains_point(Point::new(mousex, mousey))
     }
 
-    pub fn mouse_hovering_with_offset(&self, input_state: &InputState, offset: &Point) -> bool { 
+    pub fn mouse_hovering_with_offset(&self, input_state: &InputState, offset: &Point) -> bool {
         let (mousex, mousey) = input_state.mouse_pos();
-        
+
         let bounding_rect = Rect::new(
             self.x() + offset.x,
             self.y() + offset.y,
             self.bounding_rect.width(),
-            self.bounding_rect.height()
+            self.bounding_rect.height(),
         );
 
-        bounding_rect
-            .contains_point(Point::new(mousex, mousey)) 
+        bounding_rect.contains_point(Point::new(mousex, mousey))
     }
 
     pub fn display(
@@ -202,7 +193,7 @@ impl MenuElement {
     }
 
     pub fn xy(&self) -> Point {
-        Point::new(self.x(), self.y()) 
+        Point::new(self.x(), self.y())
     }
 
     pub fn display_with_children(
@@ -223,7 +214,7 @@ impl MenuElement {
             // Get the offset of that element
             let offset = child_offset[child_offset.len() - 1];
             child_offset.pop();
-            
+
             top.display_with_offset(&offset, canvas, input_state)?;
 
             // Draw all of the element's children
@@ -240,7 +231,7 @@ impl MenuElement {
         &self,
         canvas: &mut Canvas<Window>,
         texture_creator: &TextureCreator<WindowContext>,
-        font: &Font
+        font: &Font,
     ) -> Result<(), String> {
         for text in &self.text {
             text.display_with_offset(&self.xy(), canvas, texture_creator, font)?;
@@ -253,7 +244,7 @@ impl MenuElement {
         &self,
         canvas: &mut Canvas<Window>,
         texture_creator: &TextureCreator<WindowContext>,
-        font: &Font
+        font: &Font,
     ) -> Result<(), String> {
         // Start with this element
         let mut all_children = vec![self];
@@ -285,9 +276,9 @@ impl MenuElement {
 
     // Returns the id of an element that has been clicked
     pub fn get_clicked(&self, input_state: &InputState, button: MouseButton) -> Option<String> {
-         // Start with this element
+        // Start with this element
         let mut all_children = vec![self];
-        let mut child_offset = vec![Point::new(0, 0)]; 
+        let mut child_offset = vec![Point::new(0, 0)];
 
         let mut id = None;
 
@@ -301,8 +292,9 @@ impl MenuElement {
             let offset = child_offset[child_offset.len() - 1];
             child_offset.pop();
 
-            if top.mouse_hovering_with_offset(input_state, &offset) &&
-               input_state.mouse_button_is_clicked(button) {
+            if top.mouse_hovering_with_offset(input_state, &offset)
+                && input_state.mouse_button_is_clicked(button)
+            {
                 id = top.id.clone();
             }
 
@@ -310,7 +302,7 @@ impl MenuElement {
                 all_children.push(child);
                 child_offset.push(Point::new(top.x() + offset.x, top.y() + offset.y));
             }
-        } 
+        }
 
         id
     }
