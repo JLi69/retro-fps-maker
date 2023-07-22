@@ -3,13 +3,16 @@ use crate::Level;
 use sdl2::mouse::MouseButton;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::Canvas;
+use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
+
+pub mod level_editor_menu;
 
 pub fn display_level_editor(
     canvas: &mut Canvas<Window>,
     level: &Level,
     input_state: &InputState,
+    textures: &[Texture]
 ) -> Result<(), String> {
     for y in 0..level.height {
         for x in 0..level.width {
@@ -17,8 +20,11 @@ pub fn display_level_editor(
             canvas.draw_rect(Rect::new(x as i32 * 32, y as i32 * 32, 32, 32))?;
 
             if level.get_tile(x as isize, y as isize) != 0 {
-                canvas.set_draw_color(Color::GREEN);
-                canvas.fill_rect(Rect::new(x as i32 * 32, y as i32 * 32, 32, 32))?
+                canvas.copy(
+                    &textures[level.get_tile(x as isize, y as isize) as usize - 1],
+                    None,
+                    Rect::new(x as i32 * 32, y as i32 * 32, 32, 32)
+                )?;
             }
         }
     }
@@ -38,12 +44,24 @@ pub fn display_level_editor(
     Ok(())
 }
 
-pub fn handle_mouse_input_editor(level: &mut Level, input_state: &InputState) {
+fn invert_tile(current: u8, selected: u8) -> u8 {
+    if current == 0 {
+        selected 
+    } else {
+        0 
+    }
+}
+
+pub fn handle_mouse_input_editor(
+    level: &mut Level,
+    input_state: &InputState,
+    selected: u8
+) {
     let (mousex, mousey) = input_state.mouse_pos();
     let (mousex, mousey) = (mousex as isize / 32, mousey as isize / 32);
 
     if input_state.mouse_button_is_clicked(MouseButton::Left) {
-        level.set_tile(mousex, mousey, level.get_tile(mousex, mousey) ^ 1);
+        level.set_tile(mousex, mousey, invert_tile(level.get_tile(mousex, mousey), selected));
     }
 
     if input_state.mouse_button_is_clicked(MouseButton::Right) {

@@ -192,6 +192,14 @@ impl MenuElement {
         self.bounding_rect.y
     }
 
+    pub fn width(&self) -> u32 {
+        self.bounding_rect.width() 
+    }
+
+    pub fn height(&self) -> u32 { 
+        self.bounding_rect.height() 
+    }
+
     pub fn xy(&self) -> Point {
         Point::new(self.x(), self.y())
     }

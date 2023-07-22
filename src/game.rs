@@ -5,6 +5,7 @@ use crate::Level;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
+use sdl2::pixels::Color;
 
 pub fn display_level(
     canvas: &mut Canvas<Window>,
@@ -12,9 +13,14 @@ pub fn display_level(
     level: &Level,
     textures: &mut [Texture],
     line_width: u32,
-) -> Result<(), String> {
+) -> Result<(), String> { 
+    canvas.set_draw_color(Color::RGB(128, 128, 128));
+    canvas.fill_rect(Rect::new(80, 0, 800, 320))?;
+    canvas.set_draw_color(Color::RGB(64, 64, 64));
+    canvas.fill_rect(Rect::new(80, 320, 800, 320))?;
+
     let mut angle =
-        -camera.fov / 2.0 + camera.rotation + camera.fov / 800.0 * line_width as f64 * 0.5;
+        -camera.fov / 2.0 + camera.rotation;
     for i in 0..(800 / line_width) {
         let (hit, tile_type) = raycast(&camera.position, angle, 32.0, level);
         let d = (hit.x - camera.position.x) * camera.rotation.cos()
@@ -33,7 +39,7 @@ pub fn display_level(
             );
 
             let dst_rect = Rect::from_center(
-                Point::new((i * line_width) as i32 + line_width as i32 / 2, 300),
+                Point::new((i * line_width) as i32 + line_width as i32 / 2 + 80, 320),
                 line_width,
                 (600.0 / d) as u32,
             );
@@ -53,7 +59,7 @@ pub fn display_level(
             );
 
             let dst_rect = Rect::from_center(
-                Point::new((i * line_width) as i32 + line_width as i32 / 2, 300),
+                Point::new((i * line_width) as i32 + line_width as i32 / 2 + 80, 320),
                 line_width,
                 (600.0 / d) as u32,
             );
