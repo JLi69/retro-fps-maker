@@ -193,11 +193,11 @@ impl MenuElement {
     }
 
     pub fn width(&self) -> u32 {
-        self.bounding_rect.width() 
+        self.bounding_rect.width()
     }
 
-    pub fn height(&self) -> u32 { 
-        self.bounding_rect.height() 
+    pub fn height(&self) -> u32 {
+        self.bounding_rect.height()
     }
 
     pub fn xy(&self) -> Point {

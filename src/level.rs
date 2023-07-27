@@ -36,4 +36,8 @@ impl Level {
 
         self.level_data[self.width * y as usize + x as usize] = tile;
     }
+
+    pub fn level_data_bytes(&self) -> &[u8] {
+        &self.level_data
+    }
 }
