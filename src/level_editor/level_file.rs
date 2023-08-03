@@ -1,4 +1,4 @@
-use crate::Level;
+use crate::{Level, sprite::Sprite};
 use std::{
     fs::File,
     io::{Write, Read}
@@ -14,17 +14,26 @@ pub fn write_level_file(level: &Level, path: &str) -> Result<(), String> {
     level_file.write(&level.spawny.to_be_bytes()).map_err(|e| e.to_string())?;
     // Write the level data to the file
     level_file.write_all(level.level_data_bytes()).map_err(|e| e.to_string())?;
+    //Write the sprites to the file
+    level_file.write(&(level.sprites.len() as u32).to_be_bytes()).map_err(|e| e.to_string())?;
+    
+    for sprite in &level.sprites {
+        level_file.write(&sprite.pos.x.to_be_bytes()).map_err(|e| e.to_string())?;
+        level_file.write(&sprite.pos.y.to_be_bytes()).map_err(|e| e.to_string())?;
+        level_file.write(&sprite.sprite_type.to_be_bytes()).map_err(|e| e.to_string())?;
+    }
+
     Ok(())
 }
 
 pub fn read_level_file(path: &str) -> Result<Level, String> {
-    let mut level_file = File::open(path).map_err(|e| e.to_string())?;
-    
+    let mut level_file = File::open(path).map_err(|e| e.to_string())?; 
+
     let mut level = {
         // read the dimensions from the file
-        let mut width = [0u8; std::mem::size_of::<usize>()];  
+        let mut width = [0u8; std::mem::size_of::<u32>()];  
         level_file.read_exact(&mut width).map_err(|e| e.to_string())?;
-        let mut height = [0u8; std::mem::size_of::<usize>()];
+        let mut height = [0u8; std::mem::size_of::<u32>()];
         level_file.read_exact(&mut height).map_err(|e| e.to_string())?;
 
         // read the starting position from the file
@@ -34,8 +43,8 @@ pub fn read_level_file(path: &str) -> Result<Level, String> {
         level_file.read_exact(&mut starty).map_err(|e| e.to_string())?; 
 
         let mut empty_level = Level::new(
-            usize::from_be_bytes(width),
-            usize::from_be_bytes(height)
+            u32::from_be_bytes(width),
+            u32::from_be_bytes(height)
         );
         empty_level.spawnx = f64::from_be_bytes(startx);
         empty_level.spawny = f64::from_be_bytes(starty);
@@ -43,13 +52,38 @@ pub fn read_level_file(path: &str) -> Result<Level, String> {
         empty_level
     };
 
-    let mut level_data = vec![0u8; level.width * level.height]; 
+    let mut level_data = vec![0u8; (level.width * level.height) as usize]; 
     level_file.read(&mut level_data).map_err(|e| e.to_string())?;
 
     for (i, tile) in level_data.iter().enumerate() {
-        let (x, y) = (i % level.width, i / level.width);
+        let (x, y) = (i % (level.width as usize), i / (level.width as usize));
         level.set_tile(x as isize, y as isize, *tile);
     }
+
+    let sprite_count = {
+        let mut sprite_count_bytes = [0u8; std::mem::size_of::<u32>()]; 
+        level_file.read_exact(&mut sprite_count_bytes).map_err(|e| e.to_string())?;
+        u32::from_be_bytes(sprite_count_bytes)
+    };
+
+    for _ in 0..sprite_count {
+        let sprite = {
+            let mut sprite_x = [0u8; std::mem::size_of::<f64>()];  
+            level_file.read_exact(&mut sprite_x).map_err(|e| e.to_string())?;
+            let mut sprite_y = [0u8; std::mem::size_of::<f64>()];
+            level_file.read_exact(&mut sprite_y).map_err(|e| e.to_string())?;
+            let mut sprite_type = [0u8; std::mem::size_of::<u8>()]; 
+            level_file.read_exact(&mut sprite_type).map_err(|e| e.to_string())?;
+            
+            Sprite::new(
+                f64::from_be_bytes(sprite_x), 
+                f64::from_be_bytes(sprite_y), 
+                u8::from_be_bytes(sprite_type)
+            )
+        };
+
+        level.place_sprite(sprite);
+    } 
 
     Ok(level)
 }

@@ -1,19 +1,23 @@
+use crate::sprite::Sprite;
+
 pub struct Level {
-    pub width: usize,
-    pub height: usize,
+    pub width: u32,
+    pub height: u32,
     level_data: Vec<u8>,
     pub spawnx: f64,
     pub spawny: f64,
+    pub sprites: Vec<Sprite>
 }
 
 impl Level {
-    pub fn new(w: usize, h: usize) -> Self {
+    pub fn new(w: u32, h: u32) -> Self {
         Level {
             width: w,
             height: h,
-            level_data: vec![0u8; w * h],
+            level_data: vec![0u8; (w * h) as usize],
             spawnx: 0.0,
             spawny: 0.0,
+            sprites: vec![]
         }
     }
 
@@ -26,7 +30,7 @@ impl Level {
             return 0;
         }
 
-        self.level_data[self.width * y as usize + x as usize]
+        self.level_data[(self.width as usize) * y as usize + x as usize]
     }
 
     pub fn set_tile(&mut self, x: isize, y: isize, tile: u8) {
@@ -34,10 +38,14 @@ impl Level {
             return;
         }
 
-        self.level_data[self.width * y as usize + x as usize] = tile;
+        self.level_data[(self.width as usize) * y as usize + x as usize] = tile;
     }
 
     pub fn level_data_bytes(&self) -> &[u8] {
         &self.level_data
+    }
+
+    pub fn place_sprite(&mut self, spr: Sprite) {
+        self.sprites.push(spr); 
     }
 }

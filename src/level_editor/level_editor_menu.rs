@@ -9,10 +9,16 @@ use sdl2::render::{Canvas, TextureCreator};
 use sdl2::ttf::Font;
 use sdl2::video::{Window, WindowContext};
 
+pub enum EditorMode {
+    Tiles,
+    Sprites
+}
+
 pub struct LevelEditorMenu {
     pub menu: MenuElement,
     pub selected: u8,
     pub icon_sz: u32,
+    pub editor_mode: EditorMode
 }
 
 impl LevelEditorMenu {
@@ -30,49 +36,84 @@ impl LevelEditorMenu {
         {
             let mut play_button = MenuElement::new(
                 16 + 60,
-                640 - 16 - 25,
+                640 - 16 - 16,
                 120,
-                50,
-                Color::RGB(0, 200, 0),
-                Color::RGB(0, 180, 0)
+                32,
+                Color::RGB(32, 32, 32),
+                Color::RGB(48, 48, 48)
             );
 
             play_button.set_id("play_button");
-            play_button.text.push(Text::new("Play Level", Color::WHITE, 8, 12, 10));
+            play_button.text.push(Text::new("Play Level", Color::WHITE, 8, 6, 10));
 
             level_editor_menu.children.push(play_button);
         }
 
+        // Save level
         {
-            let mut play_button = MenuElement::new(
+            let mut save_level = MenuElement::new(
                 16 + 60,
-                640 - 16 - 25 - 50 - 16,
+                640 - 16 - 16 - 24 - 16,
                 120,
-                50,
-                Color::RGB(0, 200, 0),
-                Color::RGB(0, 180, 0)
+                32,
+                Color::RGB(32, 32, 32),
+                Color::RGB(48, 48, 48)
             );
 
-            play_button.set_id("save_button");
-            play_button.text.push(Text::new("Save Level", Color::WHITE, 8, 12, 10));
+            save_level.set_id("save_button");
+            save_level.text.push(Text::new("Save Level", Color::WHITE, 8, 6, 10));
 
-            level_editor_menu.children.push(play_button);
+            level_editor_menu.children.push(save_level);
         }
 
+        // Load level
         {
-            let mut play_button = MenuElement::new(
+            let mut load_level = MenuElement::new(
                 16 + 60 + 120 + 16,
-                640 - 16 - 25 - 50 - 16,
+                640 - 16 - 16 - 24 - 16,
                 120,
-                50,
-                Color::RGB(0, 200, 0),
-                Color::RGB(0, 180, 0)
+                32,
+                Color::RGB(32, 32, 32),
+                Color::RGB(48, 48, 48)
             );
 
-            play_button.set_id("load_button");
-            play_button.text.push(Text::new("Load Level", Color::WHITE, 8, 12, 10));
+            load_level.set_id("load_button");
+            load_level.text.push(Text::new("Load Level", Color::WHITE, 8, 6, 10));
 
-            level_editor_menu.children.push(play_button);
+            level_editor_menu.children.push(load_level);
+        }
+
+        // Sprite/Tile buttons
+        {
+            let mut tile_button = MenuElement::new(
+                16 + 40,
+                16 + 48,
+                80,
+                32,
+                Color::RGB(48, 48, 48), 
+                Color::RGB(64, 64, 64)
+            );
+
+            tile_button.text.push(Text::new("Tiles", Color::WHITE, 8, 6, 10));
+            tile_button.set_id("tile_button");
+
+            level_editor_menu.children.push(tile_button);
+        }
+        
+        {
+            let mut sprite_button = MenuElement::new(
+                16 + 80 + 16 + 48,
+                16 + 48,
+                96,
+                32,
+                Color::RGB(48, 48, 48),
+                Color::RGB(64, 64, 64)
+            );
+
+            sprite_button.text.push(Text::new("Sprites", Color::WHITE, 8, 6, 10));
+            sprite_button.set_id("sprite_button");
+
+            level_editor_menu.children.push(sprite_button);
         }
 
         level_editor_menu
@@ -83,6 +124,7 @@ impl LevelEditorMenu {
             menu: level_editor_menu,
             selected: 1,
             icon_sz: 32,
+            editor_mode: EditorMode::Tiles
         }
     }
 
@@ -100,7 +142,7 @@ impl LevelEditorMenu {
         let (mousex, mousey) = input_state.mouse_pos();
 
         let mut x = 16;
-        let mut y = 48;
+        let mut y = 96;
         for (i, texture) in textures.iter().enumerate() {
             let icon_rect = Rect::new(
                 x + self.menu.x(),
@@ -133,7 +175,7 @@ impl LevelEditorMenu {
 
     pub fn handle_mouse_input(&mut self, input_state: &InputState, tile_count: u8) {
         let mut x = 16;
-        let mut y = 48;
+        let mut y = 96;
 
         let (mousex, mousey) = input_state.mouse_pos();
         for tile in 0..tile_count {
@@ -171,6 +213,9 @@ pub fn load_default_assets(texture_creator: &TextureCreator<WindowContext>) -> V
         "assets/images/textures/whitewall.png",
         "assets/images/textures/box.png",
         "assets/images/textures/stripeblock.png",
+        "assets/images/textures/red_door.png",
+        "assets/images/textures/blue_door.png",
+        "assets/images/textures/green_door.png",
     ];
 
     let mut textures = vec![];
@@ -178,6 +223,29 @@ pub fn load_default_assets(texture_creator: &TextureCreator<WindowContext>) -> V
     for path in default_texture_path {
         let res = texture_creator.load_texture(path);
 
+        match res {
+            Ok(tex) => textures.push(tex),
+            Err(msg) => {
+                eprintln!("{msg}")
+            }
+        }
+    }
+
+    textures
+}
+
+pub fn load_default_sprites(texture_creator: &TextureCreator<WindowContext>) -> Vec<Texture> {
+    let sprite_texture_path = vec![
+        "assets/images/sprites/red_key.png",
+        "assets/images/sprites/blue_key.png",
+        "assets/images/sprites/green_key.png",
+    ];
+
+    let mut textures = vec![];
+
+    for path in sprite_texture_path {
+        let res = texture_creator.load_texture(path);
+        
         match res {
             Ok(tex) => textures.push(tex),
             Err(msg) => {

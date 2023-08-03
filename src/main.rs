@@ -1,10 +1,11 @@
-use level_editor::level_editor_menu::load_default_assets;
+use sdl2::image::LoadTexture;
 use sdl2::keyboard::Scancode;
 use sdl2::mouse::MouseButton;
 use sdl2::pixels::Color;
 use sdl2::render::{BlendMode, Canvas, Texture};
 use sdl2::video::Window;
 use std::time::Instant;
+use sdl2::rect::Rect;
 
 mod camera;
 mod events;
@@ -14,12 +15,18 @@ mod level_editor;
 mod menu;
 mod raycast;
 mod sprite;
+
 use camera::Camera;
 use events::{can_quit, InputState};
 use game::{display_level, game_update};
 use level::Level;
 use level_editor::{
-    display_level_editor, handle_mouse_input_editor, level_editor_menu::LevelEditorMenu,
+    display_level_editor, 
+    handle_mouse_input_editor, 
+    level_editor_menu::LevelEditorMenu,
+    level_editor_menu::load_default_assets,
+    level_editor_menu::load_default_sprites,
+    level_editor_menu::EditorMode,
 };
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -51,6 +58,7 @@ fn display(
     camera: &Camera,
     level: &Level,
     textures: &mut [Texture],
+    sprite_images: &[Texture],
     input_state: &InputState,
 ) -> Result<(), String> {
     canvas.set_draw_color(Color::BLACK);
@@ -58,7 +66,7 @@ fn display(
 
     match game_mode {
         GameMode::Editor => {
-            display_level_editor(canvas, level, input_state, &*textures)?;
+            display_level_editor(canvas, level, input_state, &*textures, sprite_images)?;
         }
         GameMode::Game => {
             display_level(canvas, camera, level, textures, 2)?;
@@ -78,11 +86,12 @@ fn update(
     camera: &mut Camera,
     input_state: &InputState,
     selected_tile: u8,
+    editor_mode: &EditorMode,
     dt: f64,
 ) {
     match game_mode {
         GameMode::Editor => {
-            handle_mouse_input_editor(level, input_state, selected_tile);
+            handle_mouse_input_editor(level, input_state, selected_tile, editor_mode);
         }
         GameMode::Game => {
             game_update(level, camera, input_state, dt);
@@ -111,6 +120,8 @@ fn main() -> Result<(), String> {
 
     let mut level_editor_menu = LevelEditorMenu::new();
     let mut textures = load_default_assets(&texture_creator);
+    let sprite_images = load_default_sprites(&texture_creator);
+    let player_spawn_icon = texture_creator.load_texture("assets/images/player_spawn_icon.png")?;
 
     let mut level = Level::new(40, 40);
     let mut camera = Camera::new(0.5, 0.5, 0.0, std::f64::consts::PI / 12.0 * 5.0);
@@ -131,18 +142,39 @@ fn main() -> Result<(), String> {
             &camera,
             &level,
             &mut textures,
+            &sprite_images,
             &input_state,
         )?;
 
         if game_mode == GameMode::Editor {
-            level_editor_menu.display(
-                &mut canvas,
-                &input_state,
-                &texture_creator,
-                &font_8_bit_operator,
-                &textures,
+            match level_editor_menu.editor_mode {
+                EditorMode::Tiles => {
+                    level_editor_menu.display(
+                        &mut canvas,
+                        &input_state,
+                        &texture_creator,
+                        &font_8_bit_operator,
+                        &textures,
+                    )?;
+                    level_editor_menu.handle_mouse_input(&input_state, textures.len() as u8);
+                }
+                EditorMode::Sprites => {
+                    level_editor_menu.display(
+                        &mut canvas,
+                        &input_state,
+                        &texture_creator,
+                        &font_8_bit_operator,
+                        &sprite_images,
+                    )?;
+                    level_editor_menu.handle_mouse_input(&input_state, sprite_images.len() as u8);
+                }
+            }
+
+            canvas.copy(
+                &player_spawn_icon, 
+                None, 
+                Rect::new(level.spawnx as i32 * 16, level.spawny as i32 * 16, 16, 16)
             )?;
-            level_editor_menu.handle_mouse_input(&input_state, textures.len() as u8);
         
             let clicked = 
                 level_editor_menu.menu.get_clicked(&input_state, MouseButton::Left)
@@ -154,6 +186,12 @@ fn main() -> Result<(), String> {
                 level_editor::level_file::write_level_file(&level, "saved_level")?; 
             } else if clicked == "load_button" {
                 level = level_editor::level_file::read_level_file("saved_level")?; 
+            } else if clicked == "sprite_button" {
+                level_editor_menu.selected = 1;
+                level_editor_menu.editor_mode = EditorMode::Sprites;
+            } else if clicked == "tile_button" {   
+                level_editor_menu.selected = 1;
+                level_editor_menu.editor_mode = EditorMode::Tiles;
             }
         }
 
@@ -165,6 +203,7 @@ fn main() -> Result<(), String> {
             &mut camera,
             &input_state,
             level_editor_menu.selected,
+            &level_editor_menu.editor_mode,
             dt,
         );
         
