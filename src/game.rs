@@ -12,12 +12,15 @@ pub fn display_level(
     camera: &Camera,
     level: &Level,
     textures: &mut [Texture],
+    sprite_images: &[Texture],
     line_width: u32,
 ) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(128, 128, 128));
     canvas.fill_rect(Rect::new(80, 0, 800, 320))?;
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.fill_rect(Rect::new(80, 320, 800, 320))?;
+
+    let mut depth_buffer = vec![0.0f64; (800 / line_width) as usize];
 
     let mut angle = -camera.fov / 2.0 + camera.rotation;
     for i in 0..(800 / line_width) {
@@ -40,7 +43,7 @@ pub fn display_level(
             let dst_rect = Rect::from_center(
                 Point::new((i * line_width) as i32 + line_width as i32 / 2 + 80, 320),
                 line_width,
-                (600.0 / d) as u32,
+                (640.0 / d) as u32,
             );
 
             canvas.copy(&textures[tile_type as usize - 1], sample_rect, dst_rect)?;
@@ -60,13 +63,25 @@ pub fn display_level(
             let dst_rect = Rect::from_center(
                 Point::new((i * line_width) as i32 + line_width as i32 / 2 + 80, 320),
                 line_width,
-                (600.0 / d) as u32,
+                (640.0 / d) as u32,
             );
 
             canvas.copy(&textures[tile_type as usize - 1], sample_rect, dst_rect)?;
         }
 
+        // Update the depth buffer
+        depth_buffer[i as usize] = if tile_type > 0 { d } else { 9999.0 };
+
         angle += camera.fov / 800.0 * line_width as f64;
+    }
+
+    for sprite in &level.sprites {
+        sprite.display(
+            canvas,
+            &depth_buffer,
+            camera,
+            &sprite_images[sprite.sprite_type as usize - 1],
+        )?;
     }
 
     Ok(())

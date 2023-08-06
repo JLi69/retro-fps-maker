@@ -6,7 +6,7 @@ pub struct Level {
     level_data: Vec<u8>,
     pub spawnx: f64,
     pub spawny: f64,
-    pub sprites: Vec<Sprite>
+    pub sprites: Vec<Sprite>,
 }
 
 impl Level {
@@ -17,7 +17,7 @@ impl Level {
             level_data: vec![0u8; (w * h) as usize],
             spawnx: 0.0,
             spawny: 0.0,
-            sprites: vec![]
+            sprites: vec![],
         }
     }
 
@@ -46,6 +46,6 @@ impl Level {
     }
 
     pub fn place_sprite(&mut self, spr: Sprite) {
-        self.sprites.push(spr); 
+        self.sprites.push(spr);
     }
 }

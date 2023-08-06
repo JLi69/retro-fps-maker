@@ -2,10 +2,11 @@ use sdl2::image::LoadTexture;
 use sdl2::keyboard::Scancode;
 use sdl2::mouse::MouseButton;
 use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 use sdl2::render::{BlendMode, Canvas, Texture};
 use sdl2::video::Window;
+use std::cmp::Ordering;
 use std::time::Instant;
-use sdl2::rect::Rect;
 
 mod camera;
 mod events;
@@ -21,12 +22,9 @@ use events::{can_quit, InputState};
 use game::{display_level, game_update};
 use level::Level;
 use level_editor::{
-    display_level_editor, 
-    handle_mouse_input_editor, 
+    display_level_editor, handle_mouse_input_editor, level_editor_menu::load_default_assets,
+    level_editor_menu::load_default_sprites, level_editor_menu::EditorMode,
     level_editor_menu::LevelEditorMenu,
-    level_editor_menu::load_default_assets,
-    level_editor_menu::load_default_sprites,
-    level_editor_menu::EditorMode,
 };
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -35,11 +33,7 @@ enum GameMode {
     Game,
 }
 
-fn switch_modes(
-    game_mode: &GameMode,
-    camera: &mut Camera,
-    level: &Level,
-) -> GameMode {
+fn switch_modes(game_mode: &GameMode, camera: &mut Camera, level: &Level) -> GameMode {
     if *game_mode == GameMode::Editor {
         camera.position.x = level.spawnx;
         camera.position.y = level.spawny;
@@ -69,7 +63,7 @@ fn display(
             display_level_editor(canvas, level, input_state, &*textures, sprite_images)?;
         }
         GameMode::Game => {
-            display_level(canvas, camera, level, textures, 2)?;
+            display_level(canvas, camera, level, textures, sprite_images, 2)?;
         }
     }
 
@@ -136,6 +130,24 @@ fn main() -> Result<(), String> {
     while !can_quit(&mut event_pump) {
         let frame_start = Instant::now();
 
+        level.sprites.sort_by(|sprite1, sprite2| {
+            let sprite1_trans_x = sprite1.pos.x - camera.position.x;
+            let sprite1_trans_y = sprite1.pos.y - camera.position.y;
+            let sprite1_rotated_y = sprite1_trans_x * (-camera.rotation).cos()
+                - sprite1_trans_y * (-camera.rotation).sin();
+
+            let sprite2_trans_x = sprite2.pos.x - camera.position.x;
+            let sprite2_trans_y = sprite2.pos.y - camera.position.y;
+            let sprite2_rotated_y = sprite2_trans_x * (-camera.rotation).cos()
+                - sprite2_trans_y * (-camera.rotation).sin();
+
+            if sprite2_rotated_y < sprite1_rotated_y {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            }
+        });
+
         display(
             &mut canvas,
             &game_mode,
@@ -171,25 +183,26 @@ fn main() -> Result<(), String> {
             }
 
             canvas.copy(
-                &player_spawn_icon, 
-                None, 
-                Rect::new(level.spawnx as i32 * 16, level.spawny as i32 * 16, 16, 16)
+                &player_spawn_icon,
+                None,
+                Rect::new(level.spawnx as i32 * 16, level.spawny as i32 * 16, 16, 16),
             )?;
-        
-            let clicked = 
-                level_editor_menu.menu.get_clicked(&input_state, MouseButton::Left)
-                    .unwrap_or("".to_owned());
+
+            let clicked = level_editor_menu
+                .menu
+                .get_clicked(&input_state, MouseButton::Left)
+                .unwrap_or("".to_owned());
 
             if clicked == "play_button" {
                 game_mode = switch_modes(&game_mode, &mut camera, &level);
             } else if clicked == "save_button" {
-                level_editor::level_file::write_level_file(&level, "saved_level")?; 
+                level_editor::level_file::write_level_file(&level, "saved_level")?;
             } else if clicked == "load_button" {
-                level = level_editor::level_file::read_level_file("saved_level")?; 
+                level = level_editor::level_file::read_level_file("saved_level")?;
             } else if clicked == "sprite_button" {
                 level_editor_menu.selected = 1;
                 level_editor_menu.editor_mode = EditorMode::Sprites;
-            } else if clicked == "tile_button" {   
+            } else if clicked == "tile_button" {
                 level_editor_menu.selected = 1;
                 level_editor_menu.editor_mode = EditorMode::Tiles;
             }
@@ -206,11 +219,11 @@ fn main() -> Result<(), String> {
             &level_editor_menu.editor_mode,
             dt,
         );
-        
+
         game_mode = if input_state.key_is_clicked(Scancode::P) {
-            switch_modes(&game_mode, &mut camera, &level) 
+            switch_modes(&game_mode, &mut camera, &level)
         } else {
-            game_mode 
+            game_mode
         };
 
         input_state.update(&event_pump);
