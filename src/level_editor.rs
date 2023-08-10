@@ -79,11 +79,7 @@ fn handle_mouse_sprite_mode(level: &mut Level, mousex: f64, mousey: f64, selecte
             level.sprites.remove(i);
         }
         _ => {
-            level.place_sprite(Sprite::new(
-                mousex as f64 + 0.5,
-                mousey as f64 + 0.5,
-                selected,
-            ));
+            level.place_sprite(Sprite::new(mousex + 0.5, mousey + 0.5, selected));
         }
     }
 }

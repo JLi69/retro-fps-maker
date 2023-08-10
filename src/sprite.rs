@@ -75,7 +75,7 @@ impl Sprite {
                     && depth_buffer[i as usize] > sprite_rotated_y
                 {
                     canvas.copy(
-                        &sprite_image,
+                        sprite_image,
                         Rect::new(pixel_x as i32, 0, 1, 16),
                         Rect::from_center(
                             Point::new(i * 2 + 1 + 80, sprite_screen_y),
